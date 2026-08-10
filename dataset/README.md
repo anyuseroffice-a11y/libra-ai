@@ -38,7 +38,7 @@ python training/validate_dataset.py
 
 The validator checks JSON syntax, the exact messages-only record shape, valid roles, non-empty content, exact record counts, duplicate records, duplicate user prompts, cross-dataset exact duplicates, cross-dataset prompt overlap, and the category metadata report.
 
-The replacement builder at `training/build_batch1.py` uses independent realistic scenario banks, topic-aware answer branches, exact programming-topic code examples, and native Bangla/Banglish responses. Training and validation use different scenario pools and intent wording; the builder does not create later batches.
+The replacement builder at `training/build_batch1.py` uses independent realistic scenario banks, topic-aware answer branches, exact programming-topic code examples, and native Bangla/Banglish responses. It validates generated records in 50-example batches before writing the files. Training and validation use different scenario pools and intent wording; the builder does not create later batches.
 
 Run the quality audit after generation:
 
@@ -47,3 +47,11 @@ python training/quality_audit.py
 ```
 
 The audit reports duplicate assistant responses, repeated opening phrases, old template signatures, likely topic/code mismatches, language mismatches, short responses, and the top 20 assistant opening phrases.
+
+Run the semantic audit as the final review:
+
+```text
+python training/semantic_audit.py
+```
+
+It flags likely programming-topic mismatches, unrelated code languages, missing implementation details for explicit coding requests, and detectable Bangla/Banglish response mismatches. These are heuristics and should be supplemented with manual sample review before training.

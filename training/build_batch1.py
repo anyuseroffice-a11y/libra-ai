@@ -149,14 +149,36 @@ TRAINING_SCENARIOS = [
 def realistic_question(topic: str, category: str, mode: int, context: str, holdout: bool) -> str:
     lower = topic.lower()
     if category == "programming":
+        if "safe delete" in lower:
+            return f"I need to remove cancelled orders from {context}. What transaction and WHERE clause would make a MySQL delete safe, and how can I verify the affected rows?"
+        if "deadlock" in lower:
+            return f"Two workers in {context} occasionally deadlock while updating orders. How should I diagnose the MySQL deadlock and change the transaction?"
+        if "slow quer" in lower or "search" in lower:
+            return f"A query in {context} became slow after the table grew. How should I use EXPLAIN and indexes to find the MySQL bottleneck?"
+        if "logout" in lower:
+            return f"How should {context} implement PHP logout so the session is actually invalidated on the server?"
+        if "session timeout" in lower:
+            return f"Users stay signed in too long on {context}. How can I implement an idle timeout with PHP sessions?"
         if "file upload" in lower:
             return f"I’m adding document uploads to {context}. What should the PHP endpoint validate before saving a file, and can you show the safe part of the handler?"
         if "registration" in lower:
             return f"For {context}, I need a PHP registration endpoint. How should I validate the email, hash the password, and handle a duplicate account?"
         if "login" in lower:
             return f"Users of {context} can log in, but the session setup feels unsafe. What would a secure PDO login flow look like?"
+        if "csrf" in lower:
+            return f"A POST form in {context} changes state without a CSRF token. How should I add and verify a token in PHP?"
+        if "validation errors" in lower:
+            return f"In {context}, the form only shows 'invalid input' even when several fields are wrong. How should the PHP endpoint return useful field-level validation errors?"
+        if "transaction" in lower:
+            return f"Creating an invoice in {context} writes an invoice row and stock update. How do I make those PHP/PDO writes atomic?"
+        if "pagination" in lower:
+            return f"The {context} admin list needs pagination. How should I validate page and limit values and bind them safely in PDO?"
         if "race condition" in lower:
             return f"The search box in {context} sends a request per keystroke and old results sometimes win. How should I fix that in JavaScript?"
+        if "debounce" in lower:
+            return f"The product search in {context} calls the API on every keypress. Show a small JavaScript debounce implementation and explain where to put it."
+        if "api error" in lower:
+            return f"The frontend for {context} shows a blank screen when the API returns 401, 422, or 500. How should the fetch error handling distinguish them?"
         if "composite index" in lower:
             return f"In {context}, the orders query filters tenant_id and status and sorts by created_at. Which MySQL index fits that query, and how would I check it?"
         if "json api" in lower or "json validation" in lower:
@@ -189,34 +211,15 @@ def realistic_question(topic: str, category: str, mode: int, context: str, holdo
 
 def realistic_answer(topic: str, guidance: str, category: str, mode: int, context: str, holdout: bool) -> str:
     if category == "programming":
-        openings = [
-            f"{topic} in {context}: the important boundary is clear. ",
-            f"{topic} in {context} points to a specific failure, not the whole application. ",
-            f"{topic} should be explicit in the {context} design. ",
-            f"{topic} depends on how {context} handles this request. ",
-            f"{topic} in {context} deserves the smallest design I would ship. ",
-        ]
-        response = openings[mode] + guidance
-        if mode == 0:
-            response += "\n\nRelevant example:\n```text\n" + code_for_topic(topic) + "\n```"
-        elif mode == 1:
-            response += " The failure to watch for is a partial or stale result; reproduce that case before changing the surrounding code."
-        elif mode == 2:
-            response += " I would keep the boundary small, make the failure visible to the caller, and test the input that caused the original report."
-        elif mode == 3:
-            response += " If the workload is tiny, the simpler option wins; measure query time, error rate, or latency before adding infrastructure."
-        else:
-            response += " Pay particular attention to malformed input and retries because those are where this boundary usually becomes stateful."
-        return response
+        return programming_answer(topic, guidance, mode, context)
     if category == "research":
-        openings = [
-            f"For {topic.lower()}, the short answer is conditional.",
-            f"With {topic.lower()}, I would separate evidence from preference.",
-            f"The question about {topic.lower()} hides two decisions.",
-            f"A useful comparison of {topic.lower()} starts with the workload.",
-            f"{topic} needs these measurements before I would declare a winner.",
-        ]
-        return f"{openings[mode]} {guidance} In the context of {context}, verify the assumption against a small representative test rather than a generic benchmark."
+        return [
+            f"For {context}, {topic.lower()} is a conditional choice. {guidance} Test the stated workload before committing.",
+            f"The evidence for {topic.lower()} should be separated from preference in {context}. {guidance} Note what observation would change the recommendation.",
+            f"When {context} considers {topic.lower()}, compare the actual failure modes. {guidance} A small representative test is more useful than a slogan.",
+            f"The budget and growth assumptions for {context} matter to {topic.lower()}. {guidance} Revisit the choice when those assumptions change.",
+            f"Before choosing {topic.lower()} for {context}, measure the factors that dominate the decision. {guidance}",
+        ][mode]
     if category == "general":
         return [
               f"{topic} is easiest to understand in simple terms: {guidance} That is why it matters in {context}.",
@@ -235,19 +238,105 @@ def realistic_answer(topic: str, guidance: str, category: str, mode: int, contex
         ][mode]
     if category == "technical":
         return [
-              f"{topic} works through an observable mechanism: {guidance} Connect it to what you can see in {context}.",
-              f"For {topic}, think of a contract between concurrent parts in {context}: {guidance}",
-              f"{topic} is less mysterious when you follow one request through {context}. {guidance}",
-            f"{topic} changes in production when the tradeoff costs more in {context}: {guidance}",
-            f"{topic} can be modeled usefully in {context} as: {guidance}",
+            f"In {context}, {topic} works through a mechanism you can observe: {guidance}",
+            f"For {context}, treat {topic} as a contract between concurrent parts: {guidance}",
+            f"Follow one request through {context} to understand {topic}: {guidance}",
+            f"At production scale in {context}, {topic} changes the cost of the tradeoff: {guidance}",
+            f"A practical mental model for {topic} in {context} is: {guidance}",
         ][mode]
     return [
-            f"For {topic.lower()} in {context}, begin with the user outcome and constrain the first version until it can be tested. {guidance}",
-            f"Before choosing tools for {topic.lower()} in {context}, write the failure you are trying to prevent. {guidance}",
-            f"{topic.lower()} in {context} becomes workable when one assumption is measurable. {guidance}",
-            f"The interesting tradeoff for {topic.lower()} in {context} is scope versus feedback speed. {guidance}",
+            f"For {context}, start {topic.lower()} by naming the user outcome and the first test. {guidance}",
+            f"Before choosing tools for {topic.lower()} in {context}, write down the failure you want to prevent. {guidance}",
+            f"The first useful experiment for {topic.lower()} in {context} is: {guidance}",
+            f"For {topic.lower()} in {context}, trade scope against feedback speed. {guidance}",
             f"Keep the {topic.lower()} plan for {context} reversible while the evidence is thin. {guidance}",
         ][mode]
+
+
+def programming_answer(topic: str, guidance: str, mode: int, context: str) -> str:
+    lower = topic.lower()
+    code = code_for_topic(topic)
+    if "safe delete" in lower:
+        answer = f"For {context}, {topic} should not be deleted by status alone. First select the exact rows inside a transaction, inspect the count, then delete with the same tenant and status predicate."
+        code = """$pdo->beginTransaction();
+$check = $pdo->prepare("SELECT id FROM orders WHERE tenant_id = ? AND status = ? LIMIT 100");
+$check->execute([$tenantId, 'cancelled']);
+$ids = $check->fetchAll(PDO::FETCH_COLUMN);
+if (count($ids) > 100) {
+    $pdo->rollBack();
+    throw new RuntimeException('Review deletion scope');
+}
+$delete = $pdo->prepare("DELETE FROM orders WHERE tenant_id = ? AND status = ?");
+$delete->execute([$tenantId, 'cancelled']);
+$pdo->commit();"""
+        return answer + " This protects against an accidental cross-tenant delete and gives you an affected-row check.\n\n```sql\n" + code + "\n```"
+    if "race condition" in lower:
+        return f"In {context}, {topic} has an ordering bug: the old response wins because requests finish in a different order from the keystrokes. Abort the previous request and ignore AbortError; the newest request then owns the result.\n\n```javascript\n" + """let controller;
+
+async function search(query) {
+    controller?.abort();
+    controller = new AbortController();
+    const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`, {
+        signal: controller.signal,
+    });
+    if (!response.ok) throw new Error(`Search failed: ${response.status}`);
+    return response.json();
+}
+
+searchInput.addEventListener('input', async (event) => {
+    try {
+        renderResults(await search(event.target.value));
+    } catch (error) {
+        if (error.name !== 'AbortError') showSearchError(error);
+    }
+});""" + "\n```\nThe abort is the important part: an obsolete response cannot update the UI after a newer query starts."
+    if "debounce" in lower:
+        return f"For {context}, debouncing delays the call until typing pauses, which reduces traffic without making the search feel sluggish. Keep the timer around the fetch call, not inside the result renderer.\n\n```javascript\n" + """function debounce(callback, wait) {
+    let timer;
+    return (...args) => {
+        clearTimeout(timer);
+        timer = setTimeout(() => callback(...args), wait);
+    };
+}
+
+const requestSearch = debounce(async (query) => {
+    const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
+    if (!response.ok) throw new Error(`Search failed: ${response.status}`);
+    renderResults(await response.json());
+}, 250);""" + "\n```"
+    if "logout" in lower:
+        return f"For {context}, destroy the server-side session and expire the session cookie. Redirect after the response so a stale browser page cannot be mistaken for an authenticated session.\n\n```php\n" + """session_start();
+$_SESSION = [];
+if (ini_get('session.use_cookies')) {
+        $params = session_get_cookie_params();
+        setcookie(session_name(), '', time() - 42000, $params['path'], $params['domain'], $params['secure'], $params['httponly']);
+}
+session_destroy();
+header('Location: /login');
+exit;""" + "\n```"
+    if "session timeout" in lower:
+        return f"For {context}, store the last activity time in the session and rotate or destroy the session after the idle limit. Check this on every authenticated request, not only on the dashboard.\n\n```php\n" + """session_start();
+$idleLimit = 1800;
+if (isset($_SESSION['last_activity']) && time() - $_SESSION['last_activity'] > $idleLimit) {
+        $_SESSION = [];
+        session_destroy();
+        http_response_code(401);
+        exit('Session expired');
+}
+$_SESSION['last_activity'] = time();""" + "\n```"
+    if "deadlock" in lower:
+        return f"For {context}, use the deadlock report to identify the lock order, then make every worker update shared tables in the same order. Keep transactions short and retry a deadlock victim with bounded backoff.\n\n```sql\nSHOW ENGINE INNODB STATUS;\n```"
+    if "slow quer" in lower or "search" in lower:
+        return f"For {context}, investigate {topic} with the exact query and its parameters, then run EXPLAIN ANALYZE. Look for a full scan, an unexpectedly large row estimate, or a filesort before adding an index."
+    if mode == 0 or any(word in lower for word in ("implement", "upload", "registration", "login", "api", "crud", "transaction")):
+        return f"For {context}, {topic}: {guidance}\n\n```text\n" + code + "\n```"
+    if mode == 1:
+        return f"In {context}, reproduce the reported {topic} input first, then inspect the value crossing the boundary. {guidance} Check the failing branch with a focused test."
+    if mode == 2:
+        return f"For {context}, {topic}: {guidance} I would test the successful path, invalid input, and the state after a failed write."
+    if mode == 3:
+        return f"For {context}, {topic}: {guidance} Choose the simpler implementation until measurements show that the extra moving parts solve a real bottleneck."
+    return f"For {context}, {topic}: {guidance} The most useful edge test is the one that exercises malformed input or a retry while the operation is partially complete."
 
 
 def question_suffix(category: str, mode: int) -> str:
@@ -301,15 +390,31 @@ def bangla_pair(topic: str, guidance: str, category: str, mode: int, context: st
         response = "File upload-এ শুধু extension বিশ্বাস করবেন না। Upload error, size এবং MIME type যাচাই করে random filename ব্যবহার করুন এবং public folder-এর বাইরে ফাইল রাখুন।"
     elif "login" in lower:
         response = "Login-এর সময় password_verify() দিয়ে hash মিলিয়ে নিন, সফল হলে session_regenerate_id(true) চালান এবং session-এ শুধু প্রয়োজনীয় user id রাখুন।"
+    elif "csrf" in lower:
+        response = "CSRF ঠেকাতে session-এ random token রাখুন, form-এ পাঠান এবং POST-এর সময় hash_equals() দিয়ে মিলিয়ে নিন। Token না মিললে state change করবেন না।"
+    elif "validation errors" in lower:
+        response = "প্রতিটি field আলাদা করে validate করে errors array-তে field name অনুযায়ী message রাখুন। HTTP 422 JSON response পাঠালে frontend প্রতিটি input-এর পাশে error দেখাতে পারবে।"
+    elif "transaction" in lower:
+        response = "Invoice insert আর stock update একই PDO transaction-এর মধ্যে রাখুন। সব query সফল হলে commit করুন; exception হলে rollback করে partial state আটকান।"
+    elif "pagination" in lower:
+        response = "page আর limit integer হিসেবে parse করে maximum দিন। LIMIT ও OFFSET bindValue() দিয়ে PDO::PARAM_INT হিসেবে bind করুন; input সরাসরি SQL string-এ বসাবেন না।"
     elif "json" in lower or "api" in lower:
         response = "API boundary-তে JSON_THROW_ON_ERROR দিয়ে input parse করুন, required field ও type যাচাই করুন এবং সব failure-এর জন্য একই JSON error format ফেরত দিন।"
     elif "index" in lower:
         response = "Index বাছাই করার আগে query-র WHERE এবং ORDER BY দেখুন। tenant_id, status ও created_at একসঙ্গে ব্যবহার হলে composite index পরীক্ষা করুন, তারপর EXPLAIN দিয়ে plan মিলিয়ে নিন।"
+    elif "safe delete" in lower:
+        response = "Cancelled order delete করার আগে একই tenant_id ও status দিয়ে SELECT করে row count দেখুন। Transaction-এর মধ্যে parameterized DELETE চালান, count অস্বাভাবিক হলে rollback করুন, তারপর commit করুন।"
+    elif "race condition" in lower:
+        response = "পুরনো search response যেন নতুন ফলকে overwrite না করে, তাই আগের request AbortController দিয়ে cancel করুন। AbortError আলাদা করে ধরুন এবং নতুন response-টাই render করুন।"
+    elif "debounce" in lower:
+        response = "প্রতিটি keypress-এ API call না করে ২৫০ মিলিসেকেন্ড অপেক্ষা করুন। নতুন keypress এলে আগের timer clear করে তারপর search function চালান।"
     else:
-        response = f"এই সমস্যায় {label} অংশটাই আগে পরিষ্কার করতে হবে। নিরাপদ input validation করুন, failure স্পষ্টভাবে ধরুন এবং ছোট একটি test দিয়ে ফল মিলিয়ে নিন।"
+        response = f"{label} নিয়ে {context}-এর ক্ষেত্রে input validation, failure handling এবং একটি ছোট test—এই তিনটি আগে নিশ্চিত করুন।"
     prompt += [" একটি ছোট উদাহরণও দিন।", " সমস্যাটা কীভাবে পরীক্ষা করব?", " production-এর আগে কী review করব?", " সহজ আর scalable পদ্ধতির পার্থক্য কী?", " কোন boundary case-টি ভুলে যাওয়া সহজ?"][mode]
     response += [" ছোট একটি উদাহরণ দিয়ে শুরু করুন।", " আগে একটি reproducible test লিখুন।", " production-এর আগে failure path পরীক্ষা করুন।", " workload অনুযায়ী পদ্ধতিটি বেছে নিন।", " malformed input-ও test করুন।"][mode]
     response += f" {label} নিয়ে {context}-এর বাস্তব ব্যবহারে এই ফলটি একটি ছোট test দিয়ে যাচাই করুন।"
+    if category == "programming" and mode == 0:
+        response += "\n\nউদাহরণ:\n```text\n" + code_for_topic(topic) + "\n```"
     if category == "conversation":
         prompt = f"লিব্রা, {context}-এর {topic} নিয়ে আজকে কাজের চাপ অনেক। কোন কাজটা আগে শুরু করব বুঝতে পারছি না?"
         response = f"{context}-এর {topic} নিয়ে কাজগুলোকে প্রভাব আর জরুরিতার ভিত্তিতে সাজাই। যে কাজটি অন্য কাজ খুলে দেয়, সেটি আগে নিন এবং ছোট সময়ের মধ্যে শেষ করার মতো অংশ বেছে নিন।"
@@ -325,15 +430,31 @@ def banglish_pair(topic: str, guidance: str, category: str, mode: int, context: 
         response = "File upload-e extension trust korben na. Upload error, size ar MIME type check kore random filename din, ebong public folder-er baire rakhun."
     elif "login" in lower:
         response = "Login-e password_verify() diye hash check korun, success hole session_regenerate_id(true) call korun, ar session-e shudhu user id rakhun."
+    elif "csrf" in lower:
+        response = "CSRF prevent korte session-e random token rakhun, form-e pathan, ar POST-er shomoy hash_equals() diye verify korun. Token mismatch hole state change korben na."
+    elif "validation errors" in lower:
+        response = "Prottek field alada validate kore errors array-te field name onujayi message rakhun. HTTP 422 JSON response dile frontend input-er pashe error dekhate parbe."
+    elif "transaction" in lower:
+        response = "Invoice insert ar stock update ekta PDO transaction-er moddhe rakhun. Sob query success hole commit, exception hole rollback korun."
+    elif "pagination" in lower:
+        response = "page ar limit integer hisebe parse kore maximum din. LIMIT ar OFFSET bindValue() diye PDO::PARAM_INT kore bind korun; input SQL string-e boshaben na."
     elif "json" in lower or "api" in lower:
         response = "API boundary-te JSON input parse kore required field ar type validate korun. Error hole sob path-e consistent JSON response din."
     elif "index" in lower:
         response = "Index choose korar age WHERE ar ORDER BY dekhen. tenant_id, status, created_at ekshathe thakle composite index test kore EXPLAIN diye verify korun."
+    elif "safe delete" in lower:
+        response = "Cancelled order delete korar age same tenant_id ar status diye SELECT kore count dekhen. Transaction-er moddhe parameterized DELETE chalan, count odd hole rollback korun, tarpor commit korun."
+    elif "race condition" in lower:
+        response = "Purono search response jeno notun result overwrite na kore, tai ager request AbortController diye cancel korun. AbortError alada kore dhore shudhu latest result render korun."
+    elif "debounce" in lower:
+        response = "Prottek keypress-e API call na kore 250 millisecond wait korun. Notun keypress hole ager timer clear kore tarpor search function chalan."
     else:
-        response = f"Ei case-e {topic.lower()} er boundary ta clear kora dorkar. Input validation korun, failure ta clearly capture korun, ar chhoto test diye behavior verify korun."
+        response = f"{topic.lower()} er khetre input validation, failure handling, ar ekta chhoto test age nishchit korun."
     prompt += [" Ekta chhoto example dekhaw.", " Reproduce korar step bolben?", " Production-er age ki review korbo?", " Simple ar scalable approach-er tradeoff ki?", " Kon edge case ta miss kora easy?"][mode]
     response += [" Chhoto example diye start korun.", " Age reproducible test likhun.", " Production-er age failure path test korun.", " Workload dekhe approach choose korun.", " Malformed input-o test korun."][mode]
     response += f" {topic} niye {context}-er real use case-e ei result ekta chhoto test diye verify korun."
+    if category == "programming" and mode == 0:
+        response += "\n\nExample:\n```text\n" + code_for_topic(topic) + "\n```"
     if category == "conversation":
         prompt = f"Libra, {context}-er {topic} niye amar khub frustrated lagche. Ekhon ki pathabo?"
         response = f"{context}-er {topic} er error message, relevant code, ar expected behavior pathan. Guess na kore actual failure point theke debug korbo."
@@ -382,6 +503,45 @@ if (!hash_equals($_SESSION['csrf'], $_POST['csrf'] ?? '')) {
     http_response_code(419);
     exit('Invalid CSRF token');
 }"""
+    if "validation errors" in topic:
+        return """$errors = [];
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $errors['email'] = 'Enter a valid email address.';
+    }
+    if (strlen($password) < 12) {
+        $errors['password'] = 'Use at least 12 characters.';
+    }
+if ($errors) {
+    http_response_code(422);
+    header('Content-Type: application/json');
+    echo json_encode(['errors' => $errors], JSON_THROW_ON_ERROR);
+    exit;
+}"""
+    if "dependency" in topic:
+        return """final class UserRepository {
+    public function __construct(private PDO $pdo) {}
+
+    public function findByEmail(string $email): ?array {
+        $query = $this->pdo->prepare('SELECT id, email FROM users WHERE email = :email');
+        $query->execute(['email' => $email]);
+        return $query->fetch(PDO::FETCH_ASSOC) ?: null;
+    }
+}"""
+    if "safe delete" in topic:
+        return """START TRANSACTION;
+SELECT id FROM orders WHERE tenant_id = ? AND status = 'cancelled' LIMIT 100;
+DELETE FROM orders WHERE tenant_id = ? AND status = 'cancelled';
+COMMIT;"""
+    if "transaction" in topic:
+        return """$pdo->beginTransaction();
+try {
+    $insert->execute($insertParams);
+    $update->execute($updateParams);
+    $pdo->commit();
+} catch (Throwable $error) {
+    $pdo->rollBack();
+    throw $error;
+}"""
     if "pagination" in topic:
         return """$page = max(1, min((int)($_GET['page'] ?? 1), 10000));
 $limit = 25;
@@ -408,6 +568,13 @@ const results = await response.json();"""
         return '<label for="email">Email</label>\n<input id="email" name="email" type="email" required aria-describedby="email-error">\n<p id="email-error" role="alert"></p>'
     if "css" in topic or "tailwind" in topic:
         return ".results {\n    display: grid;\n    grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));\n    gap: 1rem;\n}"
+    if "ai api" in topic or "llm" in topic or "rag" in topic:
+        return """const result = await client.responses.create({
+  model: process.env.AI_MODEL,
+  input: [{ role: 'user', content: prompt }],
+  timeout: 15_000,
+});
+if (!result.output_text) throw new Error('Model returned no text');"""
     if "api" in topic or "json" in topic:
         return """$payload = json_decode(file_get_contents('php://input'), true, 512, JSON_THROW_ON_ERROR);
 if (!is_string($payload['email'] ?? null) || !filter_var($payload['email'], FILTER_VALIDATE_EMAIL)) {
@@ -417,13 +584,6 @@ if (!is_string($payload['email'] ?? null) || !filter_var($payload['email'], FILT
 }"""
     if "git" in topic or "linux" in topic:
         return 'git status\ngit diff --check\ngit add path/to/resolved-file\ngit commit -m "Resolve configuration conflict"'
-    if "ai" in topic or "llm" in topic or "rag" in topic:
-        return """const result = await client.responses.create({
-  model: process.env.AI_MODEL,
-  input: [{ role: 'user', content: prompt }],
-  timeout: 15_000,
-});
-if (!result.output_text) throw new Error('Model returned no text');"""
     return "const started = performance.now();\nconst result = await runOperation();\nlogger.info({ durationMs: performance.now() - started }, 'operation complete');"
 
 
@@ -435,6 +595,14 @@ def make_examples(tasks: list[tuple[str, str]], category: str, start_index: int,
             prompt = realistic_question(topic, category, mode_index, context, holdout)
             prompt += question_suffix(category, mode_index)
             response = realistic_answer(topic, guidance, category, mode_index, context, holdout)
+            if category == "programming":
+                response += [
+                    " The example is the implementation starting point; wire it to your actual input and error path.",
+                    " Reproduce the failure with the smallest input before changing surrounding code.",
+                    " Before shipping, test rejected input and confirm that state stays unchanged.",
+                    " Keep this simple until latency, traffic, or failure data justifies extra machinery.",
+                    " Try malformed input and a repeated request, not only the successful case.",
+                ][mode_index]
             language_marker = (start_index + task_index * 5 + mode_index) % 13
             if language_marker == 0:
                 prompt, response = bangla_pair(topic, guidance, category, mode_index, context)
@@ -455,7 +623,7 @@ def build() -> None:
     ]
     train_pairs = [pair for tasks, category, offset, quota in train_groups for pair in make_examples(tasks, category, offset)[:quota]]
     holdout_topics = [
-        ([(topic, guidance + " Compare the first safe baseline with one measurable alternative.") for topic, guidance in tasks], category, offset, quota)
+        ([(topic, guidance) for topic, guidance in tasks], category, offset, quota)
         for tasks, category, offset, quota in [
             (PROGRAMMING, "programming", 0, 200),
             (RESEARCH, "research", 100, 100),
@@ -467,6 +635,22 @@ def build() -> None:
     ]
     # Holdout prompts use an independent scenario framing and are never copied into training.
     validation_pairs = [pair for tasks, category, offset, quota in holdout_topics for pair in make_examples(tasks, category, offset, holdout=True)[:quota]]
+    all_pairs = train_pairs + validation_pairs
+    for batch_start in range(0, len(all_pairs), 50):
+        batch = all_pairs[batch_start:batch_start + 50]
+        if len(batch) != 50:
+            raise ValueError(f"generation batch {batch_start // 50 + 1} is not exactly 50 examples")
+        prompts = [item["messages"][0]["content"] for item, _ in batch]
+        if len(prompts) != len(set(prompts)):
+            raise ValueError(f"duplicate prompt inside generation batch {batch_start // 50 + 1}")
+        for item, category in batch:
+            user = item["messages"][0]["content"].lower()
+            assistant = item["messages"][1]["content"].lower()
+            if category == "programming" and "safe delete" in user and not any(token in assistant for token in ("delete", "transaction", "rollback", "mysql")):
+                raise ValueError(f"safe-delete semantic check failed in batch {batch_start // 50 + 1}")
+            if category == "programming" and "race condition" in user and not any(token in assistant for token in ("abortcontroller", "abort", "stale", "request")):
+                raise ValueError(f"race-condition semantic check failed in batch {batch_start // 50 + 1}")
+        print(f"Generation batch {batch_start // 50 + 1}: 50 examples checked")
     DATASET.mkdir(parents=True, exist_ok=True)
     for path, pairs in ((DATASET / "train.jsonl", train_pairs), (DATASET / "validation.jsonl", validation_pairs)):
         with path.open("w", encoding="utf-8", newline="\n") as handle:

@@ -18,6 +18,12 @@ OLD_TEMPLATE_SIGNATURES = (
     "Cover invalid input, retries, concurrency, partial failure",
     "I have a problem involving",
     "Review this design concern:",
+    "The question about",
+    "becomes workable when one assumption is measurable",
+    "Connect it to what you can see",
+    "deserves the smallest design I would ship",
+    "The important boundary is clear",
+    "Compare the first safe baseline",
 )
 
 
