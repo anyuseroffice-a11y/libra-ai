@@ -140,6 +140,205 @@ VALIDATION_SCENARIOS = [
     "a property maintenance app",
 ]
 
+TRAINING_SCENARIOS = [
+    "a local booking service", "an internal finance tool", "a community forum", "a small online shop",
+    "a volunteer scheduling app", "a course platform", "a clinic dashboard", "a delivery portal",
+]
+
+
+def realistic_question(topic: str, category: str, mode: int, context: str, holdout: bool) -> str:
+    lower = topic.lower()
+    if category == "programming":
+        if "file upload" in lower:
+            return f"I’m adding document uploads to {context}. What should the PHP endpoint validate before saving a file, and can you show the safe part of the handler?"
+        if "registration" in lower:
+            return f"For {context}, I need a PHP registration endpoint. How should I validate the email, hash the password, and handle a duplicate account?"
+        if "login" in lower:
+            return f"Users of {context} can log in, but the session setup feels unsafe. What would a secure PDO login flow look like?"
+        if "race condition" in lower:
+            return f"The search box in {context} sends a request per keystroke and old results sometimes win. How should I fix that in JavaScript?"
+        if "composite index" in lower:
+            return f"In {context}, the orders query filters tenant_id and status and sorts by created_at. Which MySQL index fits that query, and how would I check it?"
+        if "json api" in lower or "json validation" in lower:
+            return f"My PHP endpoint for {context} sometimes emits an HTML error page. How can I validate JSON input and return consistent JSON errors?"
+        if "password reset" in lower:
+            return f"I’m implementing password reset for {context}. What should the token table store, and how do I make the link single-use?"
+        if "fetch" in lower:
+            return f"A dashboard in {context} treats a 500 response as successful JSON. What is a robust fetch() error path?"
+        if "deployment" in lower or "linux" in lower:
+            return f"The {context} service works in my shell but fails under systemd. What should I inspect in the logs and service environment?"
+        if "rag" in lower:
+            return f"I’m adding document search to {context}. How should I chunk, retrieve, and expose evidence without letting retrieved text override system instructions?"
+        return f"I’m working on {context}, specifically {topic.lower()}. What implementation would you use here, and what would you test first?"
+    if category == "research":
+        return f"I’m making a decision for {context}: what should I know about {topic.lower()}, and which assumptions could change the recommendation?"
+    if category == "general":
+        return f"Could you explain {topic.lower()} in plain language, with one concrete example from {context}?"
+    if category == "conversation":
+        return [
+            f"Hey Libra, I’ve got a half-formed idea for {context} and need someone to think it through with me. It is mainly about {topic.lower()}.",
+            f"I’m frustrated with the {context} project. The part about {topic.lower()} is getting nowhere. Can you help me find a sensible next step?",
+            f"I finally fixed a bug in {context}. It involved {topic.lower()}. What should I record so I don’t repeat the whole investigation later?",
+            f"Can I get a quick outside opinion on a {topic.lower()} decision I’m making for {context}?",
+            f"I have ten things to do for {context}, including {topic.lower()}, and no clear order. Help me choose the first one.",
+        ][(mode + len(context) + (1 if holdout else 0)) % 5]
+    if category == "technical":
+        return f"I keep seeing the term {topic.lower()} in engineering discussions about {context}. What is actually happening under the hood?"
+    return f"I’m planning {context} and want to think clearly about this: {topic.lower()}. Where would you start?"
+
+
+def realistic_answer(topic: str, guidance: str, category: str, mode: int, context: str, holdout: bool) -> str:
+    if category == "programming":
+        openings = [
+            f"{topic} in {context}: the important boundary is clear. ",
+            f"{topic} in {context} points to a specific failure, not the whole application. ",
+            f"{topic} should be explicit in the {context} design. ",
+            f"{topic} depends on how {context} handles this request. ",
+            f"{topic} in {context} deserves the smallest design I would ship. ",
+        ]
+        response = openings[mode] + guidance
+        if mode == 0:
+            response += "\n\nRelevant example:\n```text\n" + code_for_topic(topic) + "\n```"
+        elif mode == 1:
+            response += " The failure to watch for is a partial or stale result; reproduce that case before changing the surrounding code."
+        elif mode == 2:
+            response += " I would keep the boundary small, make the failure visible to the caller, and test the input that caused the original report."
+        elif mode == 3:
+            response += " If the workload is tiny, the simpler option wins; measure query time, error rate, or latency before adding infrastructure."
+        else:
+            response += " Pay particular attention to malformed input and retries because those are where this boundary usually becomes stateful."
+        return response
+    if category == "research":
+        openings = [
+            f"For {topic.lower()}, the short answer is conditional.",
+            f"With {topic.lower()}, I would separate evidence from preference.",
+            f"The question about {topic.lower()} hides two decisions.",
+            f"A useful comparison of {topic.lower()} starts with the workload.",
+            f"{topic} needs these measurements before I would declare a winner.",
+        ]
+        return f"{openings[mode]} {guidance} In the context of {context}, verify the assumption against a small representative test rather than a generic benchmark."
+    if category == "general":
+        return [
+              f"{topic} is easiest to understand in simple terms: {guidance} That is why it matters in {context}.",
+              f"For {topic}, a useful picture is this: {guidance} Think of {context} as a concrete case.",
+            f"{topic} has one important distinction: {guidance} It prevents a common misunderstanding in {context}.",
+            f"{topic} can be explained compactly: {guidance} The same idea applies when reasoning about {context}.",
+              f"One caveat about {topic} is worth keeping in mind. {guidance} The context of {context} can change the practical answer.",
+        ][mode]
+    if category == "conversation":
+        return [
+            f"About {topic.lower()} in {context}: absolutely, tell me the rough idea, who it is for, and what you have already tried; we can shape it without pretending the first version is final.",
+            f"For {topic.lower()} in {context}, let’s make the next move small: name the visible problem, write down the constraint that matters most, and ignore the rest until that is clear.",
+            f"The {topic.lower()} fix in {context} is worth capturing: write down the symptom, the actual cause, and the check that would catch it next time.",
+            f"On {topic.lower()} in {context}, I’ll give you a view and label the assumption behind it, so you can disagree with the premise instead of arguing with a vague conclusion.",
+            f"For {topic.lower()} in {context}, start with the task that either unblocks someone else or teaches you the most. Give it a short time box, then reassess with evidence.",
+        ][mode]
+    if category == "technical":
+        return [
+              f"{topic} works through an observable mechanism: {guidance} Connect it to what you can see in {context}.",
+              f"For {topic}, think of a contract between concurrent parts in {context}: {guidance}",
+              f"{topic} is less mysterious when you follow one request through {context}. {guidance}",
+            f"{topic} changes in production when the tradeoff costs more in {context}: {guidance}",
+            f"{topic} can be modeled usefully in {context} as: {guidance}",
+        ][mode]
+    return [
+            f"For {topic.lower()} in {context}, begin with the user outcome and constrain the first version until it can be tested. {guidance}",
+            f"Before choosing tools for {topic.lower()} in {context}, write the failure you are trying to prevent. {guidance}",
+            f"{topic.lower()} in {context} becomes workable when one assumption is measurable. {guidance}",
+            f"The interesting tradeoff for {topic.lower()} in {context} is scope versus feedback speed. {guidance}",
+            f"Keep the {topic.lower()} plan for {context} reversible while the evidence is thin. {guidance}",
+        ][mode]
+
+
+def question_suffix(category: str, mode: int) -> str:
+    suffixes = {
+        "programming": [
+            " Show the smallest practical example.",
+            " The failure is intermittent, so explain how you would reproduce it.",
+            " I want to review the design before it reaches production.",
+            " I’m weighing a simple approach against a more scalable one.",
+            " Include the boundary case most developers miss.",
+        ],
+        "research": [
+            " I need a recommendation, not just definitions.",
+            " What evidence would change your view?",
+            " Please distinguish established facts from judgment.",
+            " The decision has a small budget and a growing workload.",
+            " What would you measure before committing?",
+        ],
+        "general": [
+            " Start with the intuition.",
+            " A short analogy would help.",
+            " What is the common misunderstanding here?",
+            " How does this show up in everyday life?",
+            " What assumption makes the explanation incomplete?",
+        ],
+        "technical": [
+            " Use a request-level example if possible.",
+            " I’m trying to understand the failure mode.",
+            " Which part of the mental model is easiest to get wrong?",
+            " How does the tradeoff appear at scale?",
+            " What observation would confirm that explanation?",
+        ],
+        "creative": [
+            " Give me a concrete first milestone.",
+            " I have one week to test the idea.",
+            " Help me avoid building the wrong thing.",
+            " Include one alternative direction.",
+            " What would make the idea easier to validate?",
+        ],
+    }
+    return suffixes.get(category, [""] * 5)[mode]
+
+
+def bangla_pair(topic: str, guidance: str, category: str, mode: int, context: str) -> tuple[str, str]:
+    label = topic.split(" ", 1)[-1]
+    prompt = f"{context}-এর জন্য {label} নিয়ে সাহায্য দরকার। বাস্তব কাজে এটা কীভাবে ব্যবহার করব, আর কোন ভুলগুলো আগে ধরব?"
+    lower = topic.lower()
+    if "registration" in lower:
+        response = "Registration-এর ক্ষেত্রে আগে email validate করুন, password_hash() দিয়ে password সংরক্ষণ করুন এবং PDO prepared statement ব্যবহার করুন। একই email আবার এলে database-এর unique constraint ধরে পরিষ্কার error দিন।"
+    elif "file upload" in lower:
+        response = "File upload-এ শুধু extension বিশ্বাস করবেন না। Upload error, size এবং MIME type যাচাই করে random filename ব্যবহার করুন এবং public folder-এর বাইরে ফাইল রাখুন।"
+    elif "login" in lower:
+        response = "Login-এর সময় password_verify() দিয়ে hash মিলিয়ে নিন, সফল হলে session_regenerate_id(true) চালান এবং session-এ শুধু প্রয়োজনীয় user id রাখুন।"
+    elif "json" in lower or "api" in lower:
+        response = "API boundary-তে JSON_THROW_ON_ERROR দিয়ে input parse করুন, required field ও type যাচাই করুন এবং সব failure-এর জন্য একই JSON error format ফেরত দিন।"
+    elif "index" in lower:
+        response = "Index বাছাই করার আগে query-র WHERE এবং ORDER BY দেখুন। tenant_id, status ও created_at একসঙ্গে ব্যবহার হলে composite index পরীক্ষা করুন, তারপর EXPLAIN দিয়ে plan মিলিয়ে নিন।"
+    else:
+        response = f"এই সমস্যায় {label} অংশটাই আগে পরিষ্কার করতে হবে। নিরাপদ input validation করুন, failure স্পষ্টভাবে ধরুন এবং ছোট একটি test দিয়ে ফল মিলিয়ে নিন।"
+    prompt += [" একটি ছোট উদাহরণও দিন।", " সমস্যাটা কীভাবে পরীক্ষা করব?", " production-এর আগে কী review করব?", " সহজ আর scalable পদ্ধতির পার্থক্য কী?", " কোন boundary case-টি ভুলে যাওয়া সহজ?"][mode]
+    response += [" ছোট একটি উদাহরণ দিয়ে শুরু করুন।", " আগে একটি reproducible test লিখুন।", " production-এর আগে failure path পরীক্ষা করুন।", " workload অনুযায়ী পদ্ধতিটি বেছে নিন।", " malformed input-ও test করুন।"][mode]
+    response += f" {label} নিয়ে {context}-এর বাস্তব ব্যবহারে এই ফলটি একটি ছোট test দিয়ে যাচাই করুন।"
+    if category == "conversation":
+        prompt = f"লিব্রা, {context}-এর {topic} নিয়ে আজকে কাজের চাপ অনেক। কোন কাজটা আগে শুরু করব বুঝতে পারছি না?"
+        response = f"{context}-এর {topic} নিয়ে কাজগুলোকে প্রভাব আর জরুরিতার ভিত্তিতে সাজাই। যে কাজটি অন্য কাজ খুলে দেয়, সেটি আগে নিন এবং ছোট সময়ের মধ্যে শেষ করার মতো অংশ বেছে নিন।"
+    return prompt, response
+
+
+def banglish_pair(topic: str, guidance: str, category: str, mode: int, context: str) -> tuple[str, str]:
+    prompt = f"{context} er jonno {topic} niye amar project-e jhamela hocche. Practical bhabe ki korbo?"
+    lower = topic.lower()
+    if "registration" in lower:
+        response = "Registration-er jonno email validate kore password_hash() diye password store korun, ar PDO prepared statement use korun. Same email hole unique constraint-er error handle korun."
+    elif "file upload" in lower:
+        response = "File upload-e extension trust korben na. Upload error, size ar MIME type check kore random filename din, ebong public folder-er baire rakhun."
+    elif "login" in lower:
+        response = "Login-e password_verify() diye hash check korun, success hole session_regenerate_id(true) call korun, ar session-e shudhu user id rakhun."
+    elif "json" in lower or "api" in lower:
+        response = "API boundary-te JSON input parse kore required field ar type validate korun. Error hole sob path-e consistent JSON response din."
+    elif "index" in lower:
+        response = "Index choose korar age WHERE ar ORDER BY dekhen. tenant_id, status, created_at ekshathe thakle composite index test kore EXPLAIN diye verify korun."
+    else:
+        response = f"Ei case-e {topic.lower()} er boundary ta clear kora dorkar. Input validation korun, failure ta clearly capture korun, ar chhoto test diye behavior verify korun."
+    prompt += [" Ekta chhoto example dekhaw.", " Reproduce korar step bolben?", " Production-er age ki review korbo?", " Simple ar scalable approach-er tradeoff ki?", " Kon edge case ta miss kora easy?"][mode]
+    response += [" Chhoto example diye start korun.", " Age reproducible test likhun.", " Production-er age failure path test korun.", " Workload dekhe approach choose korun.", " Malformed input-o test korun."][mode]
+    response += f" {topic} niye {context}-er real use case-e ei result ekta chhoto test diye verify korun."
+    if category == "conversation":
+        prompt = f"Libra, {context}-er {topic} niye amar khub frustrated lagche. Ekhon ki pathabo?"
+        response = f"{context}-er {topic} er error message, relevant code, ar expected behavior pathan. Guess na kore actual failure point theke debug korbo."
+    return prompt, response
+
 MODES = [
     ("implementation", "How would you implement {topic}? Give a practical approach and a small working example where code is useful.", "Implementation plan: {guidance}"),
     ("debugging", "I have a problem involving {topic}. How would you diagnose it, and what fix would you apply first?", "Start by checking the symptom against the boundary described in the question. The likely root cause is addressed by this fix: {guidance}"),
@@ -150,23 +349,81 @@ MODES = [
 
 
 def code_for_topic(topic: str) -> str:
-    topic = topic.rsplit(": ", 1)[-1]
-    if topic.startswith("PHP"):
-        return "$statement = $pdo->prepare('SELECT id, password_hash FROM users WHERE email = :email');\n$statement->execute(['email' => $email]);\n$user = $statement->fetch(PDO::FETCH_ASSOC);\nif (!$user || !password_verify($password, $user['password_hash'])) {\n    throw new RuntimeException('Invalid credentials');\n}"
-    if topic.startswith("MySQL"):
-        return "CREATE INDEX idx_orders_customer_status ON orders (customer_id, status, created_at);\nSELECT customer_id, COUNT(*) AS order_count\nFROM orders\nWHERE status = ?\nGROUP BY customer_id;"
-    if topic.startswith("JavaScript"):
-        return "const response = await fetch('/api/items', { signal: controller.signal });\nif (!response.ok) throw new Error(`Request failed: ${response.status}`);\nconst items = await response.json();\nrenderItems(items);"
-    if topic.startswith("HTML"):
+    topic = topic.rsplit(": ", 1)[-1].lower()
+    if "file upload" in topic:
+        return """$file = $_FILES['document'] ?? null;
+if (!$file || $file['error'] !== UPLOAD_ERR_OK || $file['size'] > 5_000_000) {
+    throw new InvalidArgumentException('Invalid upload');
+}
+$finfo = new finfo(FILEINFO_MIME_TYPE);
+if (!in_array($finfo->file($file['tmp_name']), ['application/pdf', 'image/png'], true)) {
+    throw new InvalidArgumentException('Unsupported file type');
+}
+$name = bin2hex(random_bytes(16));
+move_uploaded_file($file['tmp_name'], __DIR__ . '/../private_uploads/' . $name);"""
+    if "registration" in topic:
+        return """$hash = password_hash($password, PASSWORD_DEFAULT);
+$statement = $pdo->prepare('INSERT INTO users (email, password_hash) VALUES (:email, :hash)');
+$statement->execute(['email' => $email, 'hash' => $hash]);"""
+    if "login" in topic or "password reset" in topic:
+        return """$statement = $pdo->prepare('SELECT id, password_hash FROM users WHERE email = :email');
+$statement->execute(['email' => $email]);
+$user = $statement->fetch(PDO::FETCH_ASSOC);
+if (!$user || !password_verify($password, $user['password_hash'])) {
+    throw new RuntimeException('Invalid credentials');
+}
+session_regenerate_id(true);
+$_SESSION['user_id'] = $user['id'];"""
+    if "csrf" in topic:
+        return """if (!isset($_SESSION['csrf'])) {
+    $_SESSION['csrf'] = bin2hex(random_bytes(32));
+}
+if (!hash_equals($_SESSION['csrf'], $_POST['csrf'] ?? '')) {
+    http_response_code(419);
+    exit('Invalid CSRF token');
+}"""
+    if "pagination" in topic:
+        return """$page = max(1, min((int)($_GET['page'] ?? 1), 10000));
+$limit = 25;
+$statement = $pdo->prepare('SELECT id, title FROM posts ORDER BY created_at DESC LIMIT :limit OFFSET :offset');
+$statement->bindValue(':limit', $limit, PDO::PARAM_INT);
+$statement->bindValue(':offset', ($page - 1) * $limit, PDO::PARAM_INT);
+$statement->execute();"""
+    if "composite index" in topic or "schema indexes" in topic:
+        return "CREATE INDEX idx_orders_tenant_status_created ON orders (tenant_id, status, created_at);\nEXPLAIN SELECT * FROM orders WHERE tenant_id = ? AND status = ? ORDER BY created_at DESC;"
+    if "aggregate" in topic or "reporting join" in topic:
+        return """SELECT customer_id, COUNT(*) AS order_count
+FROM orders
+WHERE status = ?
+GROUP BY customer_id
+HAVING COUNT(*) > ?;"""
+    if "javascript" in topic:
+        return """const controller = new AbortController();
+const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`, {
+  signal: controller.signal,
+});
+if (!response.ok) throw new Error(`Search failed: ${response.status}`);
+const results = await response.json();"""
+    if "html" in topic:
         return '<label for="email">Email</label>\n<input id="email" name="email" type="email" required aria-describedby="email-error">\n<p id="email-error" role="alert"></p>'
-    if topic.startswith("CSS") or topic.startswith("Tailwind"):
+    if "css" in topic or "tailwind" in topic:
         return ".results {\n    display: grid;\n    grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));\n    gap: 1rem;\n}"
-    if topic.startswith("REST") or topic.startswith("JSON"):
-        return "const payload = await request.json();\nif (!payload.email || typeof payload.email !== 'string') {\n    return response.status(400).json({ error: 'email is required' });\n}"
-    if topic.startswith("Git") or topic.startswith("Linux"):
+    if "api" in topic or "json" in topic:
+        return """$payload = json_decode(file_get_contents('php://input'), true, 512, JSON_THROW_ON_ERROR);
+if (!is_string($payload['email'] ?? null) || !filter_var($payload['email'], FILTER_VALIDATE_EMAIL)) {
+    http_response_code(422);
+    echo json_encode(['error' => 'A valid email is required']);
+    exit;
+}"""
+    if "git" in topic or "linux" in topic:
         return 'git status\ngit diff --check\ngit add path/to/resolved-file\ngit commit -m "Resolve configuration conflict"'
-    if topic.startswith("AI") or topic.startswith("LLM") or topic.startswith("RAG"):
-        return "const result = await client.responses.create({\n  model: process.env.AI_MODEL,\n  input: [{ role: 'user', content: prompt }],\n  timeout: 15_000,\n});\nif (!result.output_text) throw new Error('Model returned no text');"
+    if "ai" in topic or "llm" in topic or "rag" in topic:
+        return """const result = await client.responses.create({
+  model: process.env.AI_MODEL,
+  input: [{ role: 'user', content: prompt }],
+  timeout: 15_000,
+});
+if (!result.output_text) throw new Error('Model returned no text');"""
     return "const started = performance.now();\nconst result = await runOperation();\nlogger.info({ durationMs: performance.now() - started }, 'operation complete');"
 
 
@@ -174,29 +431,15 @@ def make_examples(tasks: list[tuple[str, str]], category: str, start_index: int,
     result: list[tuple[dict, str]] = []
     for task_index, (topic, guidance) in enumerate(tasks):
         for mode_index, (_, prompt_template, response_template) in enumerate(MODES):
-            if holdout:
-                holdout_prompts = [
-                    "A teammate inherited {topic}. What would you change first, and how would you verify it?",
-                    "The production symptom points to {topic}. Walk through a diagnosis and the smallest safe fix.",
-                    "Before shipping a feature involving {topic}, review the design for failure modes and test coverage.",
-                    "Choose an approach for {topic} under a real workload. Explain the tradeoffs and the assumptions behind your choice.",
-                    "What could go wrong with {topic} at the edges of its input, traffic, or failure behavior? Give concrete mitigations.",
-                ]
-                prompt = holdout_prompts[mode_index].format(topic=topic)
-            else:
-                prompt = prompt_template.format(topic=topic)
-            response = response_template.format(guidance=guidance)
-            if category == "programming" and mode_index == 0:
-                response += "\n\nExample:\n```text\n" + code_for_topic(topic) + "\n```"
-            if holdout:
-                response = response + " Verify the recommendation with a focused test or measurement for this scenario."
+            context = VALIDATION_SCENARIOS[(task_index + mode_index * 2) % len(VALIDATION_SCENARIOS)] if holdout else TRAINING_SCENARIOS[(task_index + mode_index) % len(TRAINING_SCENARIOS)]
+            prompt = realistic_question(topic, category, mode_index, context, holdout)
+            prompt += question_suffix(category, mode_index)
+            response = realistic_answer(topic, guidance, category, mode_index, context, holdout)
             language_marker = (start_index + task_index * 5 + mode_index) % 13
             if language_marker == 0:
-                prompt = "বাংলায় উত্তর দিন: " + prompt
-                response = "মূল বিষয়: " + response
+                prompt, response = bangla_pair(topic, guidance, category, mode_index, context)
             elif language_marker == 1:
-                prompt = "Banglish-e bujhaiyen: " + prompt
-                response = "Short kore bolle, " + response
+                prompt, response = banglish_pair(topic, guidance, category, mode_index, context)
             result.append(({"messages": [{"role": "user", "content": prompt}, {"role": "assistant", "content": response}]}, category))
     return result
 
@@ -212,7 +455,7 @@ def build() -> None:
     ]
     train_pairs = [pair for tasks, category, offset, quota in train_groups for pair in make_examples(tasks, category, offset)[:quota]]
     holdout_topics = [
-        ([(f"{VALIDATION_SCENARIOS[index % len(VALIDATION_SCENARIOS)]}: {topic}", guidance + " Compare the first safe baseline with one measurable alternative.") for index, (topic, guidance) in enumerate(tasks)], category, offset, quota)
+        ([(topic, guidance + " Compare the first safe baseline with one measurable alternative.") for topic, guidance in tasks], category, offset, quota)
         for tasks, category, offset, quota in [
             (PROGRAMMING, "programming", 0, 200),
             (RESEARCH, "research", 100, 100),

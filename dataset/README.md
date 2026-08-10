@@ -38,4 +38,12 @@ python training/validate_dataset.py
 
 The validator checks JSON syntax, the exact messages-only record shape, valid roles, non-empty content, exact record counts, duplicate records, duplicate user prompts, cross-dataset exact duplicates, cross-dataset prompt overlap, and the category metadata report.
 
-The deterministic Batch 1 builder is available at `training/build_batch1.py` for reproducibility. It writes only the current batch files and does not create later training batches.
+The replacement builder at `training/build_batch1.py` uses independent realistic scenario banks, topic-aware answer branches, exact programming-topic code examples, and native Bangla/Banglish responses. Training and validation use different scenario pools and intent wording; the builder does not create later batches.
+
+Run the quality audit after generation:
+
+```text
+python training/quality_audit.py
+```
+
+The audit reports duplicate assistant responses, repeated opening phrases, old template signatures, likely topic/code mismatches, language mismatches, short responses, and the top 20 assistant opening phrases.
