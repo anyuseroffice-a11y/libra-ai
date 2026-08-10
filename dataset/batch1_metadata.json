@@ -1,0 +1,20 @@
+{
+  "batch": 1,
+  "training_categories": {
+    "programming": 200,
+    "research": 100,
+    "general": 75,
+    "conversation": 50,
+    "technical": 50,
+    "creative": 25
+  },
+  "validation_categories": {
+    "programming": 200,
+    "research": 100,
+    "general": 75,
+    "conversation": 50,
+    "technical": 50,
+    "creative": 25
+  },
+  "note": "Category metadata is separate so each JSONL record keeps the exact messages-only fine-tuning schema."
+}
