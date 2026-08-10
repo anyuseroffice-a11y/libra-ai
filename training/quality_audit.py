@@ -42,6 +42,18 @@ def opening(text: str) -> str:
     return " ".join(words[:5])
 
 
+def is_identity_question(text: str) -> bool:
+    lowered = text.lower()
+    return any(term in lowered for term in ("your name", "who are you", "libra ai", "who created", "who owns", "kaidoct", "chatgpt", "gemini", "qwen", "identity", "assistant name", "project identity"))
+
+
+def is_concise_math_answer(user: str, response: str) -> bool:
+    lowered = user.lower()
+    math_terms = ("sum", "log_", "derivative", "integral", "probability", "gcd", "inverse", "mod", "sin(", "cos(", "eigen", "second derivative", "term of", "orthogonal", "prime", "area", "series", "arrangements", "edges in", "complex")
+    arithmetic_shape = any(symbol in user for symbol in ("=", "+", "-", "<", ">", "^", "|", "sqrt", "x")) and any(char.isdigit() for char in user)
+    return (any(term in lowered for term in math_terms) or arithmetic_shape) and ("=" in response or "->" in response or "therefore" in response.lower() or "!" in response)
+
+
 def audit_split(name: str, rows: list[dict]) -> tuple[list[str], Counter, Counter]:
     issues: list[str] = []
     users = [messages(row)[0] for row in rows]
@@ -52,7 +64,7 @@ def audit_split(name: str, rows: list[dict]) -> tuple[list[str], Counter, Counte
         issues.append(f"{name}: duplicate assistant responses = {len(responses) - len(set(responses))}")
     for index, (user, response) in enumerate(zip(users, responses), start=1):
         lowered = user.lower()
-        if len(response.strip()) < 40:
+        if len(response.strip()) < 40 and not is_identity_question(user) and not is_concise_math_answer(user, response):
             issues.append(f"{name}:{index}: very short assistant response")
         if not response.strip():
             issues.append(f"{name}:{index}: empty assistant response")

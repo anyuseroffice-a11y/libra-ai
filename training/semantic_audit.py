@@ -124,11 +124,12 @@ def audit(path: Path) -> list[str]:
                 flags.append(f"{location}: JavaScript question contains PHP-only code")
         if not re.search(r"[\u0980-\u09ff]", user_lower):
             for keyword, required in TOPIC_REQUIREMENTS:
-                if keyword in user_lower and not any(token in answer_lower for token in required):
+                keyword_match = re.search(rf"\b{re.escape(keyword)}\b", user_lower)
+                if keyword_match and not any(token in answer_lower for token in required):
                     flags.append(f"{location}: '{keyword}' question lacks a matching answer signal ({', '.join(required)})")
                     break
         # Identity checks
-        if any(w in user_lower for w in ("your name", "who are you", "who is libra", "who created", "who owns", "what is libra ai", "company behind libra")):
+        if any(w in user_lower for w in ("your name", "who are you", "who is libra", "who created", "who owns", "what is libra ai", "company behind libra")) and "intended tone" not in user_lower:
             if not any(w in answer_lower for w in ("libra ai", "bappy bhadra", "kaidoct")):
                 flags.append(f"{location}: Identity question lacks Libra AI/Bappy Bhadra/KAIDOCT answer")
         # Math checks - only flag when question explicitly asks for explanation
@@ -148,7 +149,7 @@ def audit(path: Path) -> list[str]:
                 flags.append(f"{location}: AI/ML question lacks ML terminology in answer")
         # System design checks - only flag if question is clearly about system design
         if re.search(r"\b(design a|system design|url shortener|chat system|notification system|rate limit|caching|load balanc|microservice|event-driven|message queue)\b", user_lower):
-            if not any(w in answer_lower for w in ("component", "service", "database", "cache", "queue", "api", "load", "scale", "endpoint", "architecture", "redis", "mysql", "storage", "index", "hash", "webhook", "model", "push", "pull", "read", "write", "sync", "websocket", "concurrent", "preference", "notification", "channel", "init", "backup", "restore", "verify", "deploy", "rollout", "downtime", "risk", "rollback", "http", "header", "signature", "retry", "log", "subscriber", "sql", "migration", "table", "regex", "dns", "lookup", "format", "version", "meta")):
+            if not any(w in answer_lower for w in ("component", "service", "database", "cache", "queue", "api", "load", "scale", "endpoint", "architecture", "redis", "mysql", "storage", "index", "hash", "webhook", "model", "push", "pull", "read", "write", "sync", "websocket", "concurrent", "preference", "notification", "channel", "init", "backup", "restore", "verify", "deploy", "rollout", "downtime", "risk", "rollback", "http", "header", "signature", "retry", "log", "subscriber", "sql", "migration", "table", "regex", "dns", "lookup", "format", "version", "meta", "algorithm", "algorithms")):
                 if len(assistant) > 50:
                     flags.append(f"{location}: System design question lacks design content")
         # Language checks

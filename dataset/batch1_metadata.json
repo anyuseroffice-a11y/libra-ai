@@ -18,7 +18,15 @@
     "research_deep": 20,
     "programming_deep": 30
   },
-  "total_training": 694,
-  "total_validation": 674,
-  "note": "Extended dataset with identity, mathematics, algorithms, system design, AI/ML, and deeper examples."
+  "total_training": 844,
+  "total_validation": 749,
+  "note": "Extended dataset with identity, mathematics, algorithms, system design, AI/ML, and deeper examples.",
+  "identity_correction": {
+    "training": 100,
+    "validation": 50
+  },
+  "coding_correction": {
+    "training": 50,
+    "validation": 25
+  }
 }

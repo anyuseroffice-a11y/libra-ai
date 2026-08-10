@@ -14,8 +14,8 @@ TRAIN_PATH = ROOT / "dataset" / "train.jsonl"
 VALIDATION_PATH = ROOT / "dataset" / "validation.jsonl"
 METADATA_PATH = ROOT / "dataset" / "batch1_metadata.json"
 VALID_ROLES = {"user", "assistant", "system"}
-EXPECTED_TRAINING_COUNT = 694
-EXPECTED_VALIDATION_COUNT = 674
+EXPECTED_TRAINING_COUNT = 844
+EXPECTED_VALIDATION_COUNT = 749
 
 
 def load_jsonl(path: Path) -> tuple[list[dict[str, Any]], list[str]]:
