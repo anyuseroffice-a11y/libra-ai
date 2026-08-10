@@ -1,0 +1,33 @@
+Libra AI dataset final quality report
+====================================
+Training count: 694
+Validation count: 674
+Exact duplicates (within+between splits): 0
+  Training duplicates: 0
+  Validation duplicates: 0
+  Cross-dataset exact duplicates: 0
+Exact duplicates (all 1000, set count): 1368
+Prompt overlap (train vs validation): 0
+Duplicate responses (all splits): 0
+Repeated opening groups: 224
+Old template signature hits: 0
+Semantic audit flags: 0
+Code-topic mismatch flags: 0
+Language mismatch flags: 0
+
+Training category distribution:
+  identity: 27
+  mathematics: 52
+  algorithms: 25
+  system_design: 20
+  ai_ml: 25
+  research_deep: 20
+  programming_deep: 30
+Validation category distribution:
+  identity: 24
+  mathematics: 41
+  algorithms: 20
+  system_design: 20
+  ai_ml: 25
+  research_deep: 20
+  programming_deep: 30
